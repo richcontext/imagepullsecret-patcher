@@ -23,6 +23,7 @@ var (
 	configManagedOnly          bool          = false
 	configRunOnce              bool          = false
 	configAllServiceAccount    bool          = false
+	configSecretsOnly          bool          = false
 	configDockerconfigjson     string        = ""
 	configDockerConfigJSONPath string        = ""
 	configSecretName           string        = "image-pull-secret" // default to image-pull-secret
@@ -48,6 +49,7 @@ func main() {
 	flag.BoolVar(&configManagedOnly, "managedonly", LookUpEnvOrBool("CONFIG_MANAGEDONLY", configManagedOnly), "only modify secrets which are annotated as managed by imagepullsecret")
 	flag.BoolVar(&configRunOnce, "runonce", LookUpEnvOrBool("CONFIG_RUNONCE", configRunOnce), "run a single update and exit instead of looping")
 	flag.BoolVar(&configAllServiceAccount, "allserviceaccount", LookUpEnvOrBool("CONFIG_ALLSERVICEACCOUNT", configAllServiceAccount), "if false, patch just default service account; if true, list and patch all service accounts")
+	flag.BoolVar(&configSecretsOnly, "secretsOnly", LookUpEnvOrBool("CONFIG_SECRETSONLY", configSecretsOnly), "if true, only s")
 	flag.StringVar(&configDockerconfigjson, "dockerconfigjson", LookupEnvOrString("CONFIG_DOCKERCONFIGJSON", configDockerconfigjson), "json credential for authenicating container registry, exclusive with `dockerconfigjsonpath`")
 	flag.StringVar(&configDockerConfigJSONPath, "dockerconfigjsonpath", LookupEnvOrString("CONFIG_DOCKERCONFIGJSONPATH", configDockerConfigJSONPath), "path to json file containing credentials for the registry to be distributed, exclusive with `dockerconfigjson`")
 	flag.StringVar(&configSecretName, "secretname", LookupEnvOrString("CONFIG_SECRETNAME", configSecretName), "set name of managed secrets")
@@ -122,9 +124,11 @@ func loop(k8s *k8sClient) {
 			continue
 		}
 		// get default service account, and patch image pull secret if not exist
-		err = processServiceAccount(k8s, namespace)
-		if err != nil {
-			log.Error(err)
+		if !configSecretsOnly {
+			err = processServiceAccount(k8s, namespace)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 }
